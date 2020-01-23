@@ -71,6 +71,10 @@ private[spark] class MountVolumesFeatureStep(
             .withEmptyDir(
               new EmptyDirVolumeSource(medium.getOrElse(""),
               new Quantity(sizeLimit.orNull)))
+
+        case KubernetesNFSVolumeConf(server, readOnly, path) =>
+          new VolumeBuilder()
+            .withNfs(new NFSVolumeSource(server, readOnly.map(Boolean.box).orNull, path))
       }
 
       val volume = volumeBuilder.withName(spec.volumeName).build()
