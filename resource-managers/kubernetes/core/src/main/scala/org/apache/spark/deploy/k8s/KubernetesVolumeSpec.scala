@@ -32,9 +32,9 @@ private[spark] case class KubernetesEmptyDirVolumeConf(
   extends KubernetesVolumeSpecificConf
 
 private[spark] case class KubernetesNFSVolumeConf(
-    server: String,
+    path: String,
     readOnly: Option[Boolean],
-    path: String)
+    server: String)
   extends KubernetesVolumeSpecificConf
 
 private[spark] case class KubernetesVolumeSpec[T <: KubernetesVolumeSpecificConf](

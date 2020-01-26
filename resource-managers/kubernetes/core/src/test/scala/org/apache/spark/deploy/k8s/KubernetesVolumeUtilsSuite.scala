@@ -103,4 +103,59 @@ class KubernetesVolumeUtilsSuite extends SparkFunSuite {
     assert(volumeSpec.isFailure === true)
     assert(volumeSpec.failed.get.getMessage === "hostPath.volumeName.options.path")
   }
+
+  test("Parses nfs volumes correctly") {
+    val sparkConf = new SparkConf(false)
+    sparkConf.set("test.nfs.volumeName.mount.path", "/path")
+    sparkConf.set("test.nfs.volumeName.mount.readOnly", "true")
+    sparkConf.set("test.nfs.volumeName.options.path", "/share")
+    sparkConf.set("test.nfs.volumeName.options.server", "nfs.example.com")
+
+    val volumeSpec = KubernetesVolumeUtils.parseVolumesWithPrefix(sparkConf, "test.").head.get
+    assert(volumeSpec.volumeName === "volumeName")
+    assert(volumeSpec.mountPath === "/path")
+    assert(volumeSpec.mountReadOnly === true)
+    assert(volumeSpec.volumeConf.asInstanceOf[KubernetesNFSVolumeConf] ===
+      KubernetesNFSVolumeConf("/share", None, "nfs.example.com"))
+  }
+
+  test("Parses read/write nfs volumes correctly") {
+    val sparkConf = new SparkConf(false)
+    sparkConf.set("test.nfs.volumeName.mount.path", "/path")
+    sparkConf.set("test.nfs.volumeName.mount.readOnly", "false")
+    sparkConf.set("test.nfs.volumeName.options.path", "/share")
+    sparkConf.set("test.nfs.volumeName.options.readOnly", "false")
+    sparkConf.set("test.nfs.volumeName.options.server", "nfs.example.com")
+
+    val volumeSpec = KubernetesVolumeUtils.parseVolumesWithPrefix(sparkConf, "test.").head.get
+    assert(volumeSpec.volumeName === "volumeName")
+    assert(volumeSpec.mountPath === "/path")
+    assert(volumeSpec.mountReadOnly === false)
+    assert(volumeSpec.volumeConf.asInstanceOf[KubernetesNFSVolumeConf] ===
+      KubernetesNFSVolumeConf("/share", Some(false), "nfs.example.com"))
+  }
+
+  test("Gracefully fails on missing path option") {
+    val sparkConf = new SparkConf(false)
+    sparkConf.set("test.nfs.volumeName.mount.path", "/path")
+    sparkConf.set("test.nfs.volumeName.mount.readOnly", "true")
+    sparkConf.set("test.nfs.volumeName.options.pth", "/share")
+    sparkConf.set("test.nfs.volumeName.options.server", "nfs.example.com")
+
+    val volumeSpec = KubernetesVolumeUtils.parseVolumesWithPrefix(sparkConf, "test.").head
+    assert(volumeSpec.isFailure === true)
+    assert(volumeSpec.failed.get.getMessage === "nfs.volumeName.options.path")
+  }
+
+  test("Gracefully fails on missing server option") {
+    val sparkConf = new SparkConf(false)
+    sparkConf.set("test.nfs.volumeName.mount.path", "/path")
+    sparkConf.set("test.nfs.volumeName.mount.readOnly", "true")
+    sparkConf.set("test.nfs.volumeName.options.path", "/share")
+    sparkConf.set("test.nfs.volumeName.options.s", "nfs.example.com")
+
+    val volumeSpec = KubernetesVolumeUtils.parseVolumesWithPrefix(sparkConf, "test.").head
+    assert(volumeSpec.isFailure === true)
+    assert(volumeSpec.failed.get.getMessage === "nfs.volumeName.options.server")
+  }
 }
